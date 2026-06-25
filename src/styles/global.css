@@ -1493,6 +1493,13 @@ body {
   min-width: 0;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
 .header-company-logo {
   display: block;
   width: auto;
@@ -2355,7 +2362,7 @@ main {
   inset: 0;
   z-index: 80;
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   background: rgba(15, 23, 42, 0.34);
 }
 
@@ -2364,7 +2371,7 @@ main {
   height: 100%;
   padding: 18px;
   background: #ffffff;
-  box-shadow: -18px 0 38px rgba(15, 23, 42, 0.24);
+  box-shadow: 18px 0 38px rgba(15, 23, 42, 0.24);
   overflow: auto;
 }
 
@@ -2393,7 +2400,22 @@ main {
 
 .side-menu nav {
   display: grid;
+  gap: 18px;
+}
+
+.side-menu-section {
+  display: grid;
   gap: 8px;
+}
+
+.side-menu-section h3 {
+  margin: 0;
+  padding: 0 4px 2px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .side-menu nav button {
@@ -2604,6 +2626,10 @@ main {
   overflow: hidden;
 }
 
+.tracking-grid-shell {
+  min-width: 0;
+}
+
 .tracking-table-shell {
   min-width: 0;
   overflow: auto;
@@ -2776,6 +2802,10 @@ main {
 
   .header-actions {
     flex-wrap: wrap;
+  }
+
+  .header-left {
+    align-items: flex-start;
   }
 
   .file-status-item,

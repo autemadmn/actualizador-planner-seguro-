@@ -12,7 +12,7 @@ import { PlanningFiltersBar } from './components/PlanningFiltersBar';
 import { PlannerView } from './components/PlannerView';
 import { SideMenu } from './components/SideMenu';
 import { SummaryBar } from './components/SummaryBar';
-import { Tabs, type TabKey } from './components/Tabs';
+import type { TabKey } from './components/Tabs';
 import { TrackingProjectView } from './components/TrackingProjectView';
 import { useFilteredRows, useFilterOptions } from './hooks/useFilteredRows';
 import { useMasterWorkbook } from './hooks/useMasterWorkbook';
@@ -185,8 +185,20 @@ function App() {
       );
     }
 
-    if (activeTab === 'tracking') {
-      return <TrackingProjectView masterWorkbook={master.workbook} />;
+    if (activeTab === 'tracking-excel') {
+      return <TrackingProjectView masterWorkbook={master.workbook} viewMode="excel" />;
+    }
+
+    if (activeTab === 'tracking-planner') {
+      return <TrackingProjectView masterWorkbook={master.workbook} viewMode="planner" />;
+    }
+
+    if (activeTab === 'tracking-grid') {
+      return <TrackingProjectView masterWorkbook={master.workbook} viewMode="grid" />;
+    }
+
+    if (activeTab === 'tracking-calendar') {
+      return <TrackingProjectView masterWorkbook={master.workbook} viewMode="calendar" />;
     }
 
     return renderExcelWorkspace();
@@ -225,7 +237,6 @@ function App() {
           </div>
         )}
 
-        <Tabs activeTab={activeTab} onTabChange={setActiveTab} />
         {renderActiveView()}
       </main>
 

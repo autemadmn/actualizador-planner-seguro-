@@ -8,6 +8,7 @@ import type {
   TrackingRow,
   TrackingSourceKind,
 } from '../types/tracking';
+import { getTrackingComparisonColumns, rowsFromTrackingSheet } from '../services/trackingComparisonView';
 import { getInitials } from '../utils/plannerData';
 import { normalizeText } from '../utils/normalizeText';
 import {
@@ -16,10 +17,16 @@ import {
   parseTrackingWorksheet,
   readTrackingWorkbook,
 } from '../services/trackingSheet';
+import { CalendarView } from './CalendarView';
+import { ComparisonTable } from './ComparisonTable';
+import { PlannerView } from './PlannerView';
 
 interface TrackingProjectViewProps {
   masterWorkbook: ParsedMasterWorkbook | null;
+  viewMode: TrackingViewMode;
 }
+
+export type TrackingViewMode = 'excel' | 'planner' | 'grid' | 'calendar';
 
 interface TrackingFilters {
   search: string;
@@ -51,6 +58,27 @@ const initialFilters: TrackingFilters = {
   owner: 'all',
   status: 'all',
   dateState: 'all',
+};
+
+const emptyTrackingRows: TrackingRow[] = [];
+
+const trackingViewCopy: Record<TrackingViewMode, { title: string; description: string }> = {
+  excel: {
+    title: 'Excel Seguimiento de Proyectos',
+    description: 'Tabla filtrable de la hoja operativa del Excel maestro.',
+  },
+  planner: {
+    title: 'Planner Seguimiento de Proyectos',
+    description: 'Tablero de entregables de Seguimiento usando solo sus filas y requisitos filtrados.',
+  },
+  grid: {
+    title: 'Grid Seguimiento de Proyectos',
+    description: 'Revision en formato grid de los registros de Seguimiento, separada de la comparacion Planner.',
+  },
+  calendar: {
+    title: 'Calendario Seguimiento de Proyectos',
+    description: 'Calendario de publicaciones, recepciones y deadlines de la hoja Seguimiento Proyectos.',
+  },
 };
 
 const deliveryTypeLabels: Record<TrackingDeliveryType, string> = {
@@ -308,7 +336,7 @@ function TrackingDetail({ row }: { row: TrackingRow | null }) {
   );
 }
 
-export function TrackingProjectView({ masterWorkbook }: TrackingProjectViewProps) {
+export function TrackingProjectView({ masterWorkbook, viewMode }: TrackingProjectViewProps) {
   const [directWorkbook, setDirectWorkbook] = useState<ParsedTrackingWorkbook | null>(null);
   const [directError, setDirectError] = useState<string | null>(null);
   const [isDirectProcessing, setIsDirectProcessing] = useState(false);
@@ -325,10 +353,15 @@ export function TrackingProjectView({ masterWorkbook }: TrackingProjectViewProps
   );
   const parsedResult = useMemo(() => parseActiveSheet(activeSource, selectedSheetName), [activeSource, selectedSheetName]);
   const parsedSheet = parsedResult.sheet;
-  const rows = parsedSheet?.rows ?? [];
-  const filteredRows = rows.filter((row) => rowMatchesFilters(row, filters));
-  const selectedRow =
-    filteredRows.find((row) => row.id === selectedRowId) ?? rows.find((row) => row.id === selectedRowId) ?? null;
+  const rows = parsedSheet?.rows ?? emptyTrackingRows;
+  const filteredRows = useMemo(() => rows.filter((row) => rowMatchesFilters(row, filters)), [filters, rows]);
+  const selectedRow = useMemo(
+    () => filteredRows.find((row) => row.id === selectedRowId) ?? rows.find((row) => row.id === selectedRowId) ?? null,
+    [filteredRows, rows, selectedRowId],
+  );
+  const trackingComparisonRows = useMemo(() => rowsFromTrackingSheet(filteredRows), [filteredRows]);
+  const trackingComparisonColumns = useMemo(() => getTrackingComparisonColumns(), []);
+  const viewCopy = trackingViewCopy[viewMode];
   const masterHasTrackingSheet = masterWorkbook
     ? getPreferredTrackingSheetNames(masterWorkbook.workbook).length > 0
     : false;
@@ -354,10 +387,14 @@ export function TrackingProjectView({ masterWorkbook }: TrackingProjectViewProps
   }, [sheetNames]);
 
   useEffect(() => {
-    if (!selectedRowId || !filteredRows.some((row) => row.id === selectedRowId)) {
-      setSelectedRowId(filteredRows[0]?.id ?? null);
-    }
-  }, [filteredRows, selectedRowId]);
+    setSelectedRowId((current) => {
+      if (current && filteredRows.some((row) => row.id === current)) {
+        return current;
+      }
+
+      return filteredRows[0]?.id ?? null;
+    });
+  }, [filteredRows]);
 
   const metrics = useMemo(
     () => ({
@@ -403,16 +440,121 @@ export function TrackingProjectView({ masterWorkbook }: TrackingProjectViewProps
     setFilters(initialFilters);
   };
 
+  const renderExcelView = () => (
+    <div className="tracking-content-grid">
+      <div className="tracking-table-shell">
+        <table className="tracking-table">
+          <thead>
+            <tr>
+              <th>Fila</th>
+              <th>Division</th>
+              <th>Producto</th>
+              <th>Version HW</th>
+              <th>Manual usuario</th>
+              <th>Tipo</th>
+              <th>Detalle documento</th>
+              <th>Responsable</th>
+              <th>Estado</th>
+              <th>Plan pub.</th>
+              <th>Real pub.</th>
+              <th>Prev. recepcion</th>
+              <th>Real recepcion</th>
+              <th>Deadline manual</th>
+              <th>Comentarios</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRows.length === 0 ? (
+              <tr>
+                <td colSpan={15} className="grid-empty-row">
+                  No hay entregables para los filtros seleccionados.
+                </td>
+              </tr>
+            ) : (
+              filteredRows.map((row) => (
+                <tr
+                  key={row.id}
+                  className={selectedRowId === row.id ? 'is-selected' : undefined}
+                  onClick={() => setSelectedRowId(row.id)}
+                >
+                  <td className="tracking-row-number">{row.rowNumber}</td>
+                  <td>{emptyDateDisplay(row.division)}</td>
+                  <td className="tracking-product-cell">{emptyDateDisplay(row.product)}</td>
+                  <td>{emptyDateDisplay(row.hardwareVersion)}</td>
+                  <td>{emptyDateDisplay(row.manualUser)}</td>
+                  <td>
+                    <span className="tracking-type-pill">{deliveryTypeLabels[row.deliveryType]}</span>
+                  </td>
+                  <td className="tracking-detail-cell">{emptyDateDisplay(row.documentDetail)}</td>
+                  <td>
+                    <span className="grid-assignee">
+                      <span className="grid-avatar" aria-hidden="true">
+                        {getInitials(row.owner)}
+                      </span>
+                      <span>
+                        {row.owner}
+                        {row.ownerSource === 'assigned' && row.projectLead && row.projectLead !== row.owner && (
+                          <small>Max. resp.: {row.projectLead}</small>
+                        )}
+                      </span>
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`tracking-state-pill ${stateClass(row.dateState)}`}>
+                      {row.status || dateStateLabels[row.dateState]}
+                    </span>
+                  </td>
+                  <td>{dateDisplay(row.plannedPublicationDate)}</td>
+                  <td>{dateDisplay(row.realPublicationDate)}</td>
+                  <td>{dateDisplay(row.expectedReceptionDate)}</td>
+                  <td>{dateDisplay(row.realReceptionDate)}</td>
+                  <td>{dateDisplay(row.manualDeliveryDeadline)}</td>
+                  <td className="tracking-comment-cell">{row.comments || '-'}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <TrackingDetail row={selectedRow} />
+    </div>
+  );
+
+  const renderTrackingVisualization = () => {
+    if (viewMode === 'planner') {
+      return (
+        <PlannerView
+          rows={trackingComparisonRows}
+          ariaLabel="Planner Seguimiento de Proyectos"
+          emptyMessage="No hay tarjetas de Seguimiento para los filtros seleccionados."
+          showFilters={false}
+        />
+      );
+    }
+
+    if (viewMode === 'calendar') {
+      return <CalendarView rows={trackingComparisonRows} />;
+    }
+
+    if (viewMode === 'grid') {
+      return (
+        <section className="tracking-grid-shell" aria-label="Grid Seguimiento de Proyectos">
+          <ComparisonTable rows={trackingComparisonRows} columns={trackingComparisonColumns} />
+        </section>
+      );
+    }
+
+    return renderExcelView();
+  };
+
   return (
     <>
       <section className="tracking-source-panel">
         <div>
           <span className="tracking-kicker">Seguimiento Proyectos</span>
-          <h2>Visualizador Seguimiento de Proyectos</h2>
-          <p>
-            Vista dedicada de la hoja operativa del Excel maestro. La persona asignada se muestra como responsable
-            principal y el maximo responsable queda visible como contexto.
-          </p>
+          <h2>{viewCopy.title}</h2>
+          <p>{viewCopy.description}</p>
         </div>
 
         <div className="tracking-source-actions">
@@ -581,84 +723,7 @@ export function TrackingProjectView({ masterWorkbook }: TrackingProjectViewProps
             </button>
           </div>
 
-          <div className="tracking-content-grid">
-            <div className="tracking-table-shell">
-              <table className="tracking-table">
-                <thead>
-                  <tr>
-                    <th>Fila</th>
-                    <th>Division</th>
-                    <th>Producto</th>
-                    <th>Version HW</th>
-                    <th>Manual usuario</th>
-                    <th>Tipo</th>
-                    <th>Detalle documento</th>
-                    <th>Responsable</th>
-                    <th>Estado</th>
-                    <th>Plan pub.</th>
-                    <th>Real pub.</th>
-                    <th>Prev. recepcion</th>
-                    <th>Real recepcion</th>
-                    <th>Deadline manual</th>
-                    <th>Comentarios</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={15} className="grid-empty-row">
-                        No hay entregables para los filtros seleccionados.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredRows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className={selectedRowId === row.id ? 'is-selected' : undefined}
-                        onClick={() => setSelectedRowId(row.id)}
-                      >
-                        <td className="tracking-row-number">{row.rowNumber}</td>
-                        <td>{emptyDateDisplay(row.division)}</td>
-                        <td className="tracking-product-cell">{emptyDateDisplay(row.product)}</td>
-                        <td>{emptyDateDisplay(row.hardwareVersion)}</td>
-                        <td>{emptyDateDisplay(row.manualUser)}</td>
-                        <td>
-                          <span className="tracking-type-pill">{deliveryTypeLabels[row.deliveryType]}</span>
-                        </td>
-                        <td className="tracking-detail-cell">{emptyDateDisplay(row.documentDetail)}</td>
-                        <td>
-                          <span className="grid-assignee">
-                            <span className="grid-avatar" aria-hidden="true">
-                              {getInitials(row.owner)}
-                            </span>
-                            <span>
-                              {row.owner}
-                              {row.ownerSource === 'assigned' && row.projectLead && row.projectLead !== row.owner && (
-                                <small>Max. resp.: {row.projectLead}</small>
-                              )}
-                            </span>
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`tracking-state-pill ${stateClass(row.dateState)}`}>
-                            {row.status || dateStateLabels[row.dateState]}
-                          </span>
-                        </td>
-                        <td>{dateDisplay(row.plannedPublicationDate)}</td>
-                        <td>{dateDisplay(row.realPublicationDate)}</td>
-                        <td>{dateDisplay(row.expectedReceptionDate)}</td>
-                        <td>{dateDisplay(row.realReceptionDate)}</td>
-                        <td>{dateDisplay(row.manualDeliveryDeadline)}</td>
-                        <td className="tracking-comment-cell">{row.comments || '-'}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <TrackingDetail row={selectedRow} />
-          </div>
+          {renderTrackingVisualization()}
         </section>
       ) : (
         <section className="empty-state workspace-empty">

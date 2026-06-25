@@ -9,10 +9,17 @@ export function Header({ canCreateMaster, onCreateMaster, onOpenMenu }: HeaderPr
 
   return (
     <header className="app-header">
-      <div className="header-title-group">
-        <img className="header-company-logo" src={peLogoUrl} alt="Power Electronics" />
-        <div>
-          <h1>Actualizador Planner</h1>
+      <div className="header-left">
+        <button className="header-menu-button" type="button" aria-label="Abrir menu lateral" onClick={onOpenMenu}>
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+        </button>
+        <div className="header-title-group">
+          <img className="header-company-logo" src={peLogoUrl} alt="Power Electronics" />
+          <div>
+            <h1>Actualizador Planner</h1>
+          </div>
         </div>
       </div>
       <div className="header-actions">
@@ -23,11 +30,6 @@ export function Header({ canCreateMaster, onCreateMaster, onOpenMenu }: HeaderPr
           disabled={!canCreateMaster}
         >
           Crea Excel Maestro Actualizado
-        </button>
-        <button className="header-menu-button" type="button" aria-label="Abrir menu lateral" onClick={onOpenMenu}>
-          <span aria-hidden="true" />
-          <span aria-hidden="true" />
-          <span aria-hidden="true" />
         </button>
       </div>
     </header>

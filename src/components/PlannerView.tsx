@@ -17,6 +17,9 @@ import { PlanningFiltersBar } from './PlanningFiltersBar';
 
 interface PlannerViewProps {
   rows: ComparedRow[];
+  ariaLabel?: string;
+  emptyMessage?: string;
+  showFilters?: boolean;
 }
 
 type DueTone = 'late' | 'early' | 'normal';
@@ -203,7 +206,12 @@ function groupItemsByBucket(items: PlannerItem[], preferredOrder: string[]): Arr
   return Array.from(groups.entries()).filter(([, groupItems]) => groupItems.length > 0);
 }
 
-export function PlannerView({ rows }: PlannerViewProps) {
+export function PlannerView({
+  rows,
+  ariaLabel = 'Vista Planner',
+  emptyMessage = 'No hay elementos para los filtros seleccionados.',
+  showFilters = true,
+}: PlannerViewProps) {
   const sourceItems = useMemo(() => itemsFromRows(rows), [rows]);
   const [filters, setFilters] = useState(initialPlanningFilters);
   const [selectedItem, setSelectedItem] = useState<PlannerItem | null>(null);
@@ -234,19 +242,21 @@ export function PlannerView({ rows }: PlannerViewProps) {
 
   return (
     <>
-      <PlanningFiltersBar
-        filters={filters}
-        projectOptions={projectOptions}
-        assigneeOptions={assigneeOptions}
-        onFiltersChange={setFilters}
-        onClearFilters={() => setFilters(initialPlanningFilters)}
-      />
+      {showFilters && (
+        <PlanningFiltersBar
+          filters={filters}
+          projectOptions={projectOptions}
+          assigneeOptions={assigneeOptions}
+          onFiltersChange={setFilters}
+          onClearFilters={() => setFilters(initialPlanningFilters)}
+        />
+      )}
 
-      <section className="planner-view" aria-label="Vista Planner">
+      <section className="planner-view" aria-label={ariaLabel}>
         <div className="planner-board-shell">
           <div className="planner-board">
             {columns.length === 0 ? (
-              <div className="planner-empty">No hay elementos para los filtros seleccionados.</div>
+              <div className="planner-empty">{emptyMessage}</div>
             ) : (
               columns.map(([bucket, items]) => (
                 <section className="planner-column" key={bucket}>

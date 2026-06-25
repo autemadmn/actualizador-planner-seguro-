@@ -1,4 +1,13 @@
-export type TabKey = 'excel' | 'planner' | 'grid' | 'calendar' | 'master' | 'tracking';
+export type TabKey =
+  | 'excel'
+  | 'planner'
+  | 'grid'
+  | 'calendar'
+  | 'master'
+  | 'tracking-excel'
+  | 'tracking-planner'
+  | 'tracking-grid'
+  | 'tracking-calendar';
 
 interface TabsProps {
   activeTab: TabKey;
@@ -11,7 +20,10 @@ const tabs: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: 'grid', label: 'Grid', icon: 'GR' },
   { key: 'calendar', label: 'Calendario', icon: 'CA' },
   { key: 'master', label: 'Maestro', icon: 'MA' },
-  { key: 'tracking', label: 'Seguimiento', icon: 'SP' },
+  { key: 'tracking-excel', label: 'Excel Seguimiento', icon: 'SE' },
+  { key: 'tracking-planner', label: 'Planner Seguimiento', icon: 'SP' },
+  { key: 'tracking-grid', label: 'Grid Seguimiento', icon: 'SG' },
+  { key: 'tracking-calendar', label: 'Calendario Seguimiento', icon: 'SC' },
 ];
 
 export function Tabs({ activeTab, onTabChange }: TabsProps) {
