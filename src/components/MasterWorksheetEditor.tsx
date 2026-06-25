@@ -448,7 +448,12 @@ export function MasterWorksheetEditor({
                 <tr key={row.rowNumber}>
                   <td className="master-row-number">{row.rowNumber}</td>
                   {row.cells.map((cell) => {
-                    const column = model.columns[cell.columnIndex - 1];
+                    const column = model.columns.find((candidate) => candidate.index === cell.columnIndex);
+
+                    if (!column) {
+                      return null;
+                    }
+
                     const isHighlighted =
                       hasAutoFilter && cell.canonicalDates.some((date) => autoDateFilter.has(date));
 

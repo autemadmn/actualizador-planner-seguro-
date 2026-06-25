@@ -14,6 +14,7 @@ import { SideMenu } from './components/SideMenu';
 import { SummaryBar } from './components/SummaryBar';
 import type { TabKey } from './components/Tabs';
 import { TrackingProjectView, type TrackingViewMode } from './components/TrackingProjectView';
+import { ViewErrorBoundary } from './components/ViewErrorBoundary';
 import { useFilteredRows, useFilterOptions } from './hooks/useFilteredRows';
 import { useMasterWorkbook } from './hooks/useMasterWorkbook';
 import { usePlannerWorkbook } from './hooks/usePlannerWorkbook';
@@ -272,7 +273,9 @@ function App() {
           </div>
         )}
 
-        {renderActiveView()}
+        <ViewErrorBoundary resetKey={`${activeTab}-${masterVersion}-${lastLoadAt?.getTime() ?? 0}`}>
+          {renderActiveView()}
+        </ViewErrorBoundary>
       </main>
 
       <FileChangeModal

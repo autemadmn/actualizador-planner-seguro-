@@ -5,6 +5,7 @@ import type {
   ParsedTrackingSheet,
   ParsedTrackingWorkbook,
   TrackingDateState,
+  TrackingDateValue,
   TrackingDeliveryType,
   TrackingRow,
   TrackingSourceKind,
@@ -117,20 +118,43 @@ function errorMessageFromUnknown(error: unknown): string {
   return error instanceof Error ? error.message : 'No se ha podido leer el archivo seleccionado.';
 }
 
-function emptyDateDisplay(value: string): string {
-  return value || '-';
+function textValue(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : String(value ?? '').trim();
 }
 
-function dateDisplay(value: { display: string }): string {
-  return value.display || '-';
+function emptyDateDisplay(value: unknown): string {
+  return textValue(value) || '-';
+}
+
+function dateDisplay(value: Pick<TrackingDateValue, 'display'> | null | undefined): string {
+  return textValue(value?.display) || '-';
+}
+
+function deliveryTypeLabel(type: TrackingDeliveryType): string {
+  return deliveryTypeLabels[type] ?? (textValue(type) || deliveryTypeLabels['Sin tipo']);
+}
+
+function dateStateLabel(state: TrackingDateState): string {
+  return dateStateLabels[state] ?? (textValue(state) || dateStateLabels.unknown);
 }
 
 function uniqueSorted(values: string[]): string[] {
-  return Array.from(new Set(values.filter(Boolean))).sort((left, right) => left.localeCompare(right, 'es'));
+  const valuesByKey = new Map<string, string>();
+
+  for (const value of values) {
+    const cleanValue = textValue(value);
+    const key = normalizeText(cleanValue);
+
+    if (key && !valuesByKey.has(key)) {
+      valuesByKey.set(key, cleanValue);
+    }
+  }
+
+  return Array.from(valuesByKey.values()).sort((left, right) => left.localeCompare(right, 'es'));
 }
 
-function splitProductLabels(product: string): string[] {
-  return product
+function splitProductLabels(product: unknown): string[] {
+  return textValue(product)
     .split(',')
     .map((part) => part.trim())
     .filter(Boolean);
@@ -140,9 +164,13 @@ function optionValues(rows: TrackingRow[], getter: (row: TrackingRow) => string 
   return uniqueSorted(
     rows.flatMap((row) => {
       const value = getter(row);
-      return Array.isArray(value) ? value : [value];
+      return (Array.isArray(value) ? value : [value]).map(textValue);
     }),
   );
+}
+
+function matchesTextFilter(value: unknown, selectedValue: string): boolean {
+  return selectedValue === 'all' || normalizeText(value) === normalizeText(selectedValue);
 }
 
 function rowMatchesProduct(row: TrackingRow, selectedProduct: string): boolean {
@@ -156,14 +184,14 @@ function rowMatchesProduct(row: TrackingRow, selectedProduct: string): boolean {
 
 function rowMatchesFilters(row: TrackingRow, filters: TrackingFilters): boolean {
   const normalizedSearch = normalizeText(filters.search);
-  const matchesSearch = !normalizedSearch || row.searchText.includes(normalizedSearch);
-  const matchesDivision = filters.division === 'all' || row.division === filters.division;
+  const matchesSearch = !normalizedSearch || normalizeText(row.searchText).includes(normalizedSearch);
+  const matchesDivision = matchesTextFilter(row.division, filters.division);
   const matchesProduct = rowMatchesProduct(row, filters.product);
-  const matchesHardware = filters.hardware === 'all' || row.hardwareVersion === filters.hardware;
-  const matchesManual = filters.manual === 'all' || row.manualUser === filters.manual;
-  const matchesType = filters.deliveryType === 'all' || row.deliveryType === filters.deliveryType;
-  const matchesOwner = filters.owner === 'all' || row.owner === filters.owner;
-  const matchesStatus = filters.status === 'all' || row.status === filters.status;
+  const matchesHardware = matchesTextFilter(row.hardwareVersion, filters.hardware);
+  const matchesManual = matchesTextFilter(row.manualUser, filters.manual);
+  const matchesType = matchesTextFilter(row.deliveryType, filters.deliveryType);
+  const matchesOwner = matchesTextFilter(row.owner, filters.owner);
+  const matchesStatus = matchesTextFilter(row.status, filters.status);
   const matchesDateState = filters.dateState === 'all' || row.dateState === filters.dateState;
 
   return (
@@ -425,9 +453,9 @@ function TrackingFullDetailModal({ row, onClose }: { row: TrackingRow; onClose: 
         </header>
 
         <div className="tracking-detail-modal-status">
-          <span className="tracking-type-pill">{deliveryTypeLabels[row.deliveryType]}</span>
+          <span className="tracking-type-pill">{deliveryTypeLabel(row.deliveryType)}</span>
           <span className={`tracking-state-pill ${stateClass(row.dateState)}`}>
-            {row.status || dateStateLabels[row.dateState]}
+            {row.status || dateStateLabel(row.dateState)}
           </span>
           <span>{row.owner || 'Sin responsable'}</span>
         </div>
@@ -538,6 +566,12 @@ export function TrackingProjectView({ masterWorkbook, viewMode, onViewModeChange
     [rows],
   );
 
+  useEffect(() => {
+    setSelectedRowId((current) =>
+      current && filteredRows.some((row) => row.id === current) ? current : null,
+    );
+  }, [filteredRows]);
+
   const handleDirectFileSelected = async (file: File): Promise<void> => {
     setDirectError(null);
     setIsDirectProcessing(true);
@@ -609,7 +643,7 @@ export function TrackingProjectView({ masterWorkbook, viewMode, onViewModeChange
                         {row.product || 'Sin producto'}{row.hardwareVersion ? ` - ${row.hardwareVersion}` : ''}
                       </span>
                       <span className="tracking-kanban-card-meta">
-                        <span className="tracking-type-pill">{deliveryTypeLabels[row.deliveryType]}</span>
+                        <span className="tracking-type-pill">{deliveryTypeLabel(row.deliveryType)}</span>
                         <span>{dateDisplay(row.manualDeliveryDeadline)}</span>
                       </span>
                       <span className="tracking-kanban-card-footer">
@@ -670,7 +704,7 @@ export function TrackingProjectView({ masterWorkbook, viewMode, onViewModeChange
                   <td>{emptyDateDisplay(row.hardwareVersion)}</td>
                   <td>{emptyDateDisplay(row.manualUser)}</td>
                   <td>
-                    <span className="tracking-type-pill">{deliveryTypeLabels[row.deliveryType]}</span>
+                    <span className="tracking-type-pill">{deliveryTypeLabel(row.deliveryType)}</span>
                   </td>
                   <td className="tracking-detail-cell">{emptyDateDisplay(row.documentDetail)}</td>
                   <td>
@@ -688,7 +722,7 @@ export function TrackingProjectView({ masterWorkbook, viewMode, onViewModeChange
                   </td>
                   <td>
                     <span className={`tracking-state-pill ${stateClass(row.dateState)}`}>
-                      {row.status || dateStateLabels[row.dateState]}
+                      {row.status || dateStateLabel(row.dateState)}
                     </span>
                   </td>
                   <td>{dateDisplay(row.plannedPublicationDate)}</td>
