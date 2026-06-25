@@ -1,13 +1,14 @@
-import fs from "fs";
-import path from "path";
+import { copyFile, cp, mkdir, rm } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const distPath = path.resolve("dist");
-const buildFile = path.join(distPath, "build.html");
-const indexFile = path.join(distPath, "index.html");
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const distDir = path.join(rootDir, 'dist');
+const distAssetsDir = path.join(distDir, 'assets');
+const rootAssetsDir = path.join(rootDir, 'assets');
 
-if (fs.existsSync(buildFile)) {
-  fs.copyFileSync(buildFile, indexFile);
-  console.log("build.html copiado a index.html");
-} else {
-  console.warn("build.html no encontrado en dist");
-}
+await copyFile(path.join(distDir, 'build.html'), path.join(distDir, 'index.html'));
+
+await rm(rootAssetsDir, { recursive: true, force: true });
+await mkdir(rootAssetsDir, { recursive: true });
+await cp(distAssetsDir, rootAssetsDir, { recursive: true });

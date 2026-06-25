@@ -1,24 +1,52 @@
-export interface PlannerCell {
+export type DateFieldKey = 'startDate' | 'endDate';
+
+export type ColumnRole = 'name' | 'assignee' | 'startDate' | 'endDate' | 'other';
+
+export interface ExcelColumnInfo {
+  index: number;
+  letter: string;
   header: string;
-  address: string;
-  rawValue: unknown;
-  displayValue: string;
-  canonicalDates?: string[];
+  normalizedHeader: string;
+  role: ColumnRole;
 }
 
-export interface PlannerTaskRow {
+export interface DetectedColumns {
+  headerRowNumber: number;
+  nameColumnIndex: number;
+  assigneeColumnIndex: number;
+  startDateColumnIndex: number;
+  endDateColumnIndex: number;
+  visibleColumns: ExcelColumnInfo[];
+}
+
+export interface ParsedCell {
+  columnIndex: number;
+  header: string;
+  value: unknown;
+  displayValue: string;
+}
+
+export interface ParsedRow {
   excelRowNumber: number;
+  originalValues: Record<number, unknown>;
+  displayValues: Record<number, string>;
+  cells: ParsedCell[];
   taskName: string;
+  normalizedTaskName: string;
   assignee: string;
+  normalizedAssignee: string;
   startDate: string | null;
   endDate: string | null;
-  duration: string;
-  observations: string;
-  cells: PlannerCell[];
+  isBold: boolean;
+  indentationLevel: number;
 }
 
 export interface ParsedPlannerSheet {
+  fileName: string;
   sheetName: string;
-  headerRowNumber: number;
-  tasks: PlannerTaskRow[];
+  projectName: string;
+  columns: DetectedColumns;
+  rows: ParsedRow[];
 }
+
+export type UploadSlot = 'previous' | 'current';

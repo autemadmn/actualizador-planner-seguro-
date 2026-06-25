@@ -1,5 +1,5 @@
 {
-  "name": "actualizador-planner",
+  "name": "planner-date-comparator",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -9,20 +9,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^19.2.1",
-    "react-dom": "^19.2.1",
-    "exceljs": "^4.4.0",
     "@fullcalendar/core": "^6.1.19",
     "@fullcalendar/daygrid": "^6.1.19",
     "@fullcalendar/interaction": "^6.1.19",
-    "@fullcalendar/react": "^6.1.19"
+    "@fullcalendar/react": "^6.1.19",
+    "@fullcalendar/timegrid": "^6.1.19",
+    "exceljs": "^4.4.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1"
   },
   "devDependencies": {
-    "typescript": "~5.9.3",
-    "vite": "^7.2.6",
-    "@vitejs/plugin-react": "^5.1.1",
     "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.6"
   }
 }
-``

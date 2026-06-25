@@ -1,18 +1,33 @@
-import { normalizeText } from "./normalizeText";
+import { normalizeText } from './normalizeText';
 
-export function splitAssignees(text: string): string[] {
-  if (!text) return [];
-  return text.split(/[,;]+/).map((t) => t.trim());
+export interface AssigneeName {
+  label: string;
+  normalized: string;
 }
 
-export function assigneeTextMatches(
-  cellValue: string,
-  filter: string
-): boolean {
-  if (filter === "all") return true;
+export function splitAssignees(value: string): AssigneeName[] {
+  const seen = new Set<string>();
+  const people: AssigneeName[] = [];
 
-  const normCell = normalizeText(cellValue);
-  const normFilter = normalizeText(filter);
+  for (const rawPart of value.split(',')) {
+    const label = rawPart.trim().replace(/\s+/g, ' ');
+    const normalized = normalizeText(label);
 
-  return normCell.includes(normFilter);
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    people.push({ label, normalized });
+  }
+
+  return people;
+}
+
+export function assigneeTextMatches(value: string, selectedAssignees: Set<string>): boolean {
+  if (selectedAssignees.size === 0) {
+    return true;
+  }
+
+  return splitAssignees(value).some((person) => selectedAssignees.has(person.normalized));
 }

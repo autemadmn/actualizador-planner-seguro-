@@ -7,6 +7,21 @@
   </head>
   <body>
     <div id="root"></div>
-    /src/main.tsxscript>
+    <script type="module">
+      const isGitHubPages =
+        window.location.hostname.endsWith('github.io') ||
+        window.location.pathname.startsWith('/actualizador-planner-seguro-/');
+
+      if (isGitHubPages) {
+        const stylesheet = document.createElement('link');
+        stylesheet.rel = 'stylesheet';
+        stylesheet.href = '/actualizador-planner-seguro-/assets/app.css';
+        document.head.appendChild(stylesheet);
+        const appModule = '/actualizador-planner-seguro-/assets/' + 'app.js';
+        await import(/* @vite-ignore */ appModule);
+      } else {
+        await import('/src/main.tsx');
+      }
+    </script>
   </body>
 </html>

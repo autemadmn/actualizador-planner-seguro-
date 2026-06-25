@@ -1,10 +1,17 @@
-export function normalizeText(value: string | null | undefined): string {
-  if (!value) return "";
-
-  return value
+export function normalizeText(value: unknown): string {
+  return String(value ?? '')
+    .replace(/\r\n|\r|\n/g, ' ')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim();
+    .trim()
+    .replace(/\s+/g, ' ');
 }
-``
+
+export function makeMatchKey(taskName: string, assignee: string): string {
+  return `${normalizeText(taskName)}::${normalizeText(assignee)}`;
+}
+
+export function hasUsefulText(value: unknown): boolean {
+  return normalizeText(value).length > 0;
+}
