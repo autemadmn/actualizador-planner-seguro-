@@ -13,11 +13,12 @@
         window.location.pathname.startsWith('/actualizador-planner-seguro-/');
 
       if (isGitHubPages) {
+        const assetVersion = 'afcf06a';
         const stylesheet = document.createElement('link');
         stylesheet.rel = 'stylesheet';
-        stylesheet.href = '/actualizador-planner-seguro-/assets/app.css';
+        stylesheet.href = `/actualizador-planner-seguro-/assets/app.css?v=${assetVersion}`;
         document.head.appendChild(stylesheet);
-        const appModule = '/actualizador-planner-seguro-/assets/' + 'app.js';
+        const appModule = `/actualizador-planner-seguro-/assets/app.js?v=${assetVersion}`;
         await import(/* @vite-ignore */ appModule);
       } else {
         await import('/src/main.tsx');
