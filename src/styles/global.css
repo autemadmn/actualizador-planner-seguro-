@@ -2670,8 +2670,14 @@ main {
 .tracking-content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(300px, 0.28fr);
-  min-height: min(640px, calc(100vh - 360px));
+  width: 100%;
+  height: min(680px, calc(100vh - 300px));
+  min-width: min(760px, 100%);
+  min-height: 360px;
+  max-width: 100%;
+  max-height: calc(100vh - 220px);
   overflow: hidden;
+  resize: both;
 }
 
 .tracking-grid-shell {
@@ -2680,6 +2686,7 @@ main {
 
 .tracking-table-shell {
   min-width: 0;
+  height: 100%;
   overflow: auto;
 }
 
@@ -3014,6 +3021,7 @@ main {
   align-content: start;
   gap: 12px;
   min-width: 0;
+  height: 100%;
   border-left: 1px solid var(--border);
   padding: 14px;
   background: #ffffff;

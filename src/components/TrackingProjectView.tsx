@@ -480,8 +480,8 @@ export function TrackingProjectView({ masterWorkbook, viewMode, onViewModeChange
   const rows = parsedSheet?.rows ?? emptyTrackingRows;
   const filteredRows = useMemo(() => rows.filter((row) => rowMatchesFilters(row, filters)), [filters, rows]);
   const selectedRow = useMemo(
-    () => filteredRows.find((row) => row.id === selectedRowId) ?? rows.find((row) => row.id === selectedRowId) ?? null,
-    [filteredRows, rows, selectedRowId],
+    () => filteredRows.find((row) => row.id === selectedRowId) ?? null,
+    [filteredRows, selectedRowId],
   );
   const trackingComparisonRows = useMemo(() => rowsFromTrackingSheet(filteredRows), [filteredRows]);
   const trackingComparisonColumns = useMemo(() => getTrackingComparisonColumns(), []);
@@ -513,16 +513,6 @@ export function TrackingProjectView({ masterWorkbook, viewMode, onViewModeChange
       return sheetNames[0] ?? '';
     });
   }, [sheetNames]);
-
-  useEffect(() => {
-    setSelectedRowId((current) => {
-      if (current && filteredRows.some((row) => row.id === current)) {
-        return current;
-      }
-
-      return filteredRows[0]?.id ?? null;
-    });
-  }, [filteredRows]);
 
   const metrics = useMemo(
     () => ({
@@ -566,6 +556,7 @@ export function TrackingProjectView({ masterWorkbook, viewMode, onViewModeChange
 
   const clearFilters = (): void => {
     setFilters(initialFilters);
+    setSelectedRowId(null);
   };
 
   const openRowDetail = (row: TrackingRow): void => {
