@@ -1,0 +1,7 @@
+@import "./variables.css";
+
+body {
+  margin: 0;
+  font-family: Segoe UI, system-ui;
+  background: #f6f8fb;
+}
