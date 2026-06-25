@@ -12,6 +12,7 @@ import { EventDetailModal } from './EventDetailModal';
 
 interface CalendarViewProps {
   rows: ComparedRow[];
+  onRowOpen?: (row: ComparedRow) => void;
 }
 
 function eventColorForRow(row: ComparedRow): { backgroundColor: string; borderColor: string; textColor: string } {
@@ -26,7 +27,7 @@ function eventColorForRow(row: ComparedRow): { backgroundColor: string; borderCo
   return { backgroundColor: '#244A70', borderColor: '#173452', textColor: '#FFFFFF' };
 }
 
-export function CalendarView({ rows }: CalendarViewProps) {
+export function CalendarView({ rows, onRowOpen }: CalendarViewProps) {
   const [selectedRow, setSelectedRow] = useState<ComparedRow | null>(null);
   const [selectedProject, setSelectedProject] = useState<string | undefined>();
   const [selectedDueDate, setSelectedDueDate] = useState<string | null | undefined>();
@@ -75,6 +76,11 @@ export function CalendarView({ rows }: CalendarViewProps) {
   const handleEventClick = (eventClick: EventClickArg): void => {
     const row = eventClick.event.extendedProps.row as ComparedRow | undefined;
     if (row) {
+      if (onRowOpen) {
+        onRowOpen(row);
+        return;
+      }
+
       const project =
         typeof eventClick.event.extendedProps.project === 'string'
           ? eventClick.event.extendedProps.project
@@ -137,7 +143,7 @@ export function CalendarView({ rows }: CalendarViewProps) {
           info.el.setAttribute('title', `${info.event.title}${dueDate ? ` - Vence ${dueDate}` : ''}`);
         }}
       />
-      {selectedRow && (
+      {selectedRow && !onRowOpen && (
         <EventDetailModal
           row={selectedRow}
           project={selectedProject}

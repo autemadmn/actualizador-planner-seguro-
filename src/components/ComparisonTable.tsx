@@ -7,6 +7,7 @@ import { StatusBadge } from './StatusBadge';
 interface ComparisonTableProps {
   rows: ComparedRow[];
   columns: ExcelColumnInfo[];
+  onRowClick?: (row: ComparedRow) => void;
 }
 
 function getColumnClass(column: ExcelColumnInfo): string {
@@ -37,7 +38,7 @@ function getChangeForColumn(row: ComparedRow, column: ExcelColumnInfo) {
   return undefined;
 }
 
-export function ComparisonTable({ rows, columns }: ComparisonTableProps) {
+export function ComparisonTable({ rows, columns, onRowClick }: ComparisonTableProps) {
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -64,7 +65,22 @@ export function ComparisonTable({ rows, columns }: ComparisonTableProps) {
           {rows.map((row) => (
             <tr
               key={`${row.currentRow.excelRowNumber}-${row.currentRow.normalizedTaskName}-${row.currentRow.normalizedAssignee}`}
-              className={row.currentRow.isBold ? 'is-bold-row' : undefined}
+              className={[
+                row.currentRow.isBold ? 'is-bold-row' : '',
+                onRowClick ? 'is-clickable-row' : '',
+              ].filter(Boolean).join(' ') || undefined}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onKeyDown={
+                onRowClick
+                  ? (event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        onRowClick(row);
+                      }
+                    }
+                  : undefined
+              }
+              tabIndex={onRowClick ? 0 : undefined}
             >
               <td className="status-column">
                 <StatusBadge row={row} />

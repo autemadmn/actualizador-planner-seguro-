@@ -13,7 +13,7 @@ import { PlannerView } from './components/PlannerView';
 import { SideMenu } from './components/SideMenu';
 import { SummaryBar } from './components/SummaryBar';
 import type { TabKey } from './components/Tabs';
-import { TrackingProjectView } from './components/TrackingProjectView';
+import { TrackingProjectView, type TrackingViewMode } from './components/TrackingProjectView';
 import { useFilteredRows, useFilterOptions } from './hooks/useFilteredRows';
 import { useMasterWorkbook } from './hooks/useMasterWorkbook';
 import { usePlannerWorkbook } from './hooks/usePlannerWorkbook';
@@ -21,6 +21,13 @@ import { applyMasterChanges, buildMasterChangeCandidates, validateMasterProject 
 import { rowsFromMasterCandidates, rowsFromPlannerSheet } from './services/masterComparisonView';
 import { getGeneratedExcelFileName } from './utils/generatedExcel';
 import { initialPlanningFilters } from './utils/planningFilters';
+
+const trackingTabByMode: Record<TrackingViewMode, TabKey> = {
+  excel: 'tracking-excel',
+  planner: 'tracking-planner',
+  grid: 'tracking-grid',
+  calendar: 'tracking-calendar',
+};
 
 function downloadBlob(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);
@@ -142,6 +149,10 @@ function App() {
   };
 
   const renderActiveView = () => {
+    const handleTrackingViewModeChange = (mode: TrackingViewMode): void => {
+      setActiveTab(trackingTabByMode[mode]);
+    };
+
     if (activeTab === 'planner') {
       return <PlannerView rows={displayRows} />;
     }
@@ -186,19 +197,43 @@ function App() {
     }
 
     if (activeTab === 'tracking-excel') {
-      return <TrackingProjectView masterWorkbook={master.workbook} viewMode="excel" />;
+      return (
+        <TrackingProjectView
+          masterWorkbook={master.workbook}
+          viewMode="excel"
+          onViewModeChange={handleTrackingViewModeChange}
+        />
+      );
     }
 
     if (activeTab === 'tracking-planner') {
-      return <TrackingProjectView masterWorkbook={master.workbook} viewMode="planner" />;
+      return (
+        <TrackingProjectView
+          masterWorkbook={master.workbook}
+          viewMode="planner"
+          onViewModeChange={handleTrackingViewModeChange}
+        />
+      );
     }
 
     if (activeTab === 'tracking-grid') {
-      return <TrackingProjectView masterWorkbook={master.workbook} viewMode="grid" />;
+      return (
+        <TrackingProjectView
+          masterWorkbook={master.workbook}
+          viewMode="grid"
+          onViewModeChange={handleTrackingViewModeChange}
+        />
+      );
     }
 
     if (activeTab === 'tracking-calendar') {
-      return <TrackingProjectView masterWorkbook={master.workbook} viewMode="calendar" />;
+      return (
+        <TrackingProjectView
+          masterWorkbook={master.workbook}
+          viewMode="calendar"
+          onViewModeChange={handleTrackingViewModeChange}
+        />
+      );
     }
 
     return renderExcelWorkspace();

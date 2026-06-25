@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { ComparedRow } from '../types/comparison';
 import type { ParsedMasterWorkbook } from '../types/master';
 import type {
   ParsedTrackingSheet,
@@ -19,11 +20,11 @@ import {
 } from '../services/trackingSheet';
 import { CalendarView } from './CalendarView';
 import { ComparisonTable } from './ComparisonTable';
-import { PlannerView } from './PlannerView';
 
 interface TrackingProjectViewProps {
   masterWorkbook: ParsedMasterWorkbook | null;
   viewMode: TrackingViewMode;
+  onViewModeChange: (mode: TrackingViewMode) => void;
 }
 
 export type TrackingViewMode = 'excel' | 'planner' | 'grid' | 'calendar';
@@ -62,6 +63,13 @@ const initialFilters: TrackingFilters = {
 
 const emptyTrackingRows: TrackingRow[] = [];
 
+const trackingViewTabs: Array<{ mode: TrackingViewMode; label: string; icon: string }> = [
+  { mode: 'excel', label: 'Excel', icon: 'XL' },
+  { mode: 'planner', label: 'Planner', icon: 'PL' },
+  { mode: 'grid', label: 'Grid', icon: 'GR' },
+  { mode: 'calendar', label: 'Calendario', icon: 'CA' },
+];
+
 const trackingViewCopy: Record<TrackingViewMode, { title: string; description: string }> = {
   excel: {
     title: 'Excel Seguimiento de Proyectos',
@@ -96,6 +104,14 @@ const dateStateLabels: Record<TrackingDateState, string> = {
   tbd: 'TBD',
   unknown: 'Sin fecha',
 };
+
+const trackingKanbanColumns: Array<{ state: TrackingDateState; title: string; description: string }> = [
+  { state: 'overdue', title: 'Vencidas', description: 'Fechas que ya piden accion.' },
+  { state: 'planned', title: 'Planificadas', description: 'Entregables con fecha prevista.' },
+  { state: 'tbd', title: 'TBD', description: 'Pendientes de fecha o decision.' },
+  { state: 'completed', title: 'Completadas', description: 'Tareas cerradas o con fecha real.' },
+  { state: 'unknown', title: 'Sin fecha', description: 'Sin referencia temporal util.' },
+];
 
 function errorMessageFromUnknown(error: unknown): string {
   return error instanceof Error ? error.message : 'No se ha podido leer el archivo seleccionado.';
@@ -234,6 +250,10 @@ function stateClass(state: TrackingDateState): string {
     return 'is-tbd';
   }
 
+  if (state === 'unknown') {
+    return 'is-unknown';
+  }
+
   return 'is-planned';
 }
 
@@ -273,6 +293,30 @@ function SelectFilter({
         ))}
       </select>
     </label>
+  );
+}
+
+function TrackingViewTabs({
+  activeMode,
+  onChange,
+}: {
+  activeMode: TrackingViewMode;
+  onChange: (mode: TrackingViewMode) => void;
+}) {
+  return (
+    <nav className="tracking-view-tabs" aria-label="Visualizaciones de Seguimiento">
+      {trackingViewTabs.map((tab) => (
+        <button
+          key={tab.mode}
+          type="button"
+          className={activeMode === tab.mode ? 'is-active' : undefined}
+          onClick={() => onChange(tab.mode)}
+        >
+          <span aria-hidden="true">{tab.icon}</span>
+          {tab.label}
+        </button>
+      ))}
+    </nav>
   );
 }
 
@@ -336,7 +380,86 @@ function TrackingDetail({ row }: { row: TrackingRow | null }) {
   );
 }
 
-export function TrackingProjectView({ masterWorkbook, viewMode }: TrackingProjectViewProps) {
+function DetailField({
+  label,
+  value,
+  wide = false,
+}: {
+  label: string;
+  value: string;
+  wide?: boolean;
+}) {
+  return (
+    <div className={wide ? 'is-wide' : undefined}>
+      <dt>{label}</dt>
+      <dd>{value || '-'}</dd>
+    </div>
+  );
+}
+
+function formatDateWithWeek(value: { display: string }, week: string): string {
+  const display = dateDisplay(value);
+  return week ? `${display} - ${week}` : display;
+}
+
+function TrackingFullDetailModal({ row, onClose }: { row: TrackingRow; onClose: () => void }) {
+  const title = row.documentDetail || row.manualUser || row.product || `Fila ${row.rowNumber}`;
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="tracking-detail-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tracking-detail-modal-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <p className="modal-kicker">Seguimiento Proyectos - Fila {row.rowNumber}</p>
+            <h2 id="tracking-detail-modal-title">{title}</h2>
+          </div>
+          <button type="button" className="icon-button" aria-label="Cerrar detalle" onClick={onClose}>
+            x
+          </button>
+        </header>
+
+        <div className="tracking-detail-modal-status">
+          <span className="tracking-type-pill">{deliveryTypeLabels[row.deliveryType]}</span>
+          <span className={`tracking-state-pill ${stateClass(row.dateState)}`}>
+            {row.status || dateStateLabels[row.dateState]}
+          </span>
+          <span>{row.owner || 'Sin responsable'}</span>
+        </div>
+
+        <dl className="tracking-detail-modal-grid">
+          <DetailField label="Division" value={row.division} />
+          <DetailField label="Producto" value={row.product} />
+          <DetailField label="Version HW" value={row.hardwareVersion} />
+          <DetailField label="Manual usuario" value={row.manualUser} />
+          <DetailField label="Detalle documento" value={row.documentDetail} wide />
+          <DetailField label="Tipo detalle" value={row.deliveryTypeDetail} />
+          <DetailField label="Persona asignada" value={row.areaPerson} />
+          <DetailField label="Responsable mostrado" value={row.owner} />
+          <DetailField label="Maximo responsable" value={row.projectLead} />
+          <DetailField label="Publicacion planificada" value={formatDateWithWeek(row.plannedPublicationDate, row.plannedPublicationWeek)} />
+          <DetailField label="Publicacion real" value={formatDateWithWeek(row.realPublicationDate, row.realPublicationWeek)} />
+          <DetailField label="Recepcion prevista" value={formatDateWithWeek(row.expectedReceptionDate, row.expectedReceptionWeek)} />
+          <DetailField label="Recepcion real" value={formatDateWithWeek(row.realReceptionDate, row.realReceptionWeek)} />
+          <DetailField label="Deadline para cumplir manual" value={dateDisplay(row.deadlineToMeetManualDate)} />
+          <DetailField label="Deadline entrega manual" value={dateDisplay(row.manualDeliveryDeadline)} />
+          <DetailField label="Tiempo estimado neto" value={row.estimatedTime} />
+          <DetailField label="Tiempo dedicado neto" value={row.dedicatedTime} />
+          <DetailField label="Clave natural" value={row.naturalKey} wide />
+          <DetailField label="Comentarios/Faltantes" value={row.comments} wide />
+          <DetailField label="Notas" value={row.notes} wide />
+        </dl>
+      </section>
+    </div>
+  );
+}
+
+export function TrackingProjectView({ masterWorkbook, viewMode, onViewModeChange }: TrackingProjectViewProps) {
   const [directWorkbook, setDirectWorkbook] = useState<ParsedTrackingWorkbook | null>(null);
   const [directError, setDirectError] = useState<string | null>(null);
   const [isDirectProcessing, setIsDirectProcessing] = useState(false);
@@ -344,6 +467,7 @@ export function TrackingProjectView({ masterWorkbook, viewMode }: TrackingProjec
   const [selectedSheetName, setSelectedSheetName] = useState('');
   const [filters, setFilters] = useState(initialFilters);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [detailRow, setDetailRow] = useState<TrackingRow | null>(null);
 
   const sourceOptions = useMemo(() => buildSourceOptions(masterWorkbook, directWorkbook), [directWorkbook, masterWorkbook]);
   const activeSource = sourceOptions.find((source) => source.kind === sourceKind) ?? null;
@@ -361,6 +485,10 @@ export function TrackingProjectView({ masterWorkbook, viewMode }: TrackingProjec
   );
   const trackingComparisonRows = useMemo(() => rowsFromTrackingSheet(filteredRows), [filteredRows]);
   const trackingComparisonColumns = useMemo(() => getTrackingComparisonColumns(), []);
+  const trackingRowsByRowNumber = useMemo(
+    () => new Map(filteredRows.map((row) => [row.rowNumber, row])),
+    [filteredRows],
+  );
   const viewCopy = trackingViewCopy[viewMode];
   const masterHasTrackingSheet = masterWorkbook
     ? getPreferredTrackingSheetNames(masterWorkbook.workbook).length > 0
@@ -440,6 +568,74 @@ export function TrackingProjectView({ masterWorkbook, viewMode }: TrackingProjec
     setFilters(initialFilters);
   };
 
+  const openRowDetail = (row: TrackingRow): void => {
+    setSelectedRowId(row.id);
+    setDetailRow(row);
+  };
+
+  const openComparedRowDetail = (row: ComparedRow): void => {
+    const trackingRow = trackingRowsByRowNumber.get(row.currentRow.excelRowNumber);
+    if (trackingRow) {
+      openRowDetail(trackingRow);
+    }
+  };
+
+  const renderTrackingKanban = () => {
+    if (filteredRows.length === 0) {
+      return <div className="planner-empty">No hay tarjetas de Seguimiento para los filtros seleccionados.</div>;
+    }
+
+    return (
+      <section className="tracking-kanban" aria-label="Planner Seguimiento de Proyectos">
+        {trackingKanbanColumns.map((column) => {
+          const columnRows = filteredRows.filter((row) => row.dateState === column.state);
+
+          return (
+            <section className="tracking-kanban-column" key={column.state}>
+              <header>
+                <div>
+                  <h3>{column.title}</h3>
+                  <p>{column.description}</p>
+                </div>
+                <strong>{columnRows.length}</strong>
+              </header>
+
+              <div className="tracking-kanban-list">
+                {columnRows.length === 0 ? (
+                  <span className="tracking-kanban-empty">Sin entregables</span>
+                ) : (
+                  columnRows.map((row) => (
+                    <button
+                      className={`tracking-kanban-card ${stateClass(row.dateState)}`}
+                      key={row.id}
+                      type="button"
+                      onClick={() => openRowDetail(row)}
+                    >
+                      <span className="tracking-kanban-card-title">
+                        {row.documentDetail || row.manualUser || row.product || `Fila ${row.rowNumber}`}
+                      </span>
+                      <span className="tracking-kanban-card-subtitle">
+                        {row.product || 'Sin producto'}{row.hardwareVersion ? ` - ${row.hardwareVersion}` : ''}
+                      </span>
+                      <span className="tracking-kanban-card-meta">
+                        <span className="tracking-type-pill">{deliveryTypeLabels[row.deliveryType]}</span>
+                        <span>{dateDisplay(row.manualDeliveryDeadline)}</span>
+                      </span>
+                      <span className="tracking-kanban-card-footer">
+                        <span className="grid-avatar" aria-hidden="true">{getInitials(row.owner)}</span>
+                        <span>{row.owner || 'Sin responsable'}</span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </section>
+    );
+  };
+
   const renderExcelView = () => (
     <div className="tracking-content-grid">
       <div className="tracking-table-shell">
@@ -475,7 +671,7 @@ export function TrackingProjectView({ masterWorkbook, viewMode }: TrackingProjec
                 <tr
                   key={row.id}
                   className={selectedRowId === row.id ? 'is-selected' : undefined}
-                  onClick={() => setSelectedRowId(row.id)}
+                  onClick={() => openRowDetail(row)}
                 >
                   <td className="tracking-row-number">{row.rowNumber}</td>
                   <td>{emptyDateDisplay(row.division)}</td>
@@ -523,24 +719,21 @@ export function TrackingProjectView({ masterWorkbook, viewMode }: TrackingProjec
 
   const renderTrackingVisualization = () => {
     if (viewMode === 'planner') {
-      return (
-        <PlannerView
-          rows={trackingComparisonRows}
-          ariaLabel="Planner Seguimiento de Proyectos"
-          emptyMessage="No hay tarjetas de Seguimiento para los filtros seleccionados."
-          showFilters={false}
-        />
-      );
+      return renderTrackingKanban();
     }
 
     if (viewMode === 'calendar') {
-      return <CalendarView rows={trackingComparisonRows} />;
+      return <CalendarView rows={trackingComparisonRows} onRowOpen={openComparedRowDetail} />;
     }
 
     if (viewMode === 'grid') {
       return (
         <section className="tracking-grid-shell" aria-label="Grid Seguimiento de Proyectos">
-          <ComparisonTable rows={trackingComparisonRows} columns={trackingComparisonColumns} />
+          <ComparisonTable
+            rows={trackingComparisonRows}
+            columns={trackingComparisonColumns}
+            onRowClick={openComparedRowDetail}
+          />
         </section>
       );
     }
@@ -606,6 +799,8 @@ export function TrackingProjectView({ masterWorkbook, viewMode }: TrackingProjec
           </label>
         </div>
       </section>
+
+      <TrackingViewTabs activeMode={viewMode} onChange={onViewModeChange} />
 
       {!masterWorkbook && !directWorkbook && (
         <p className="grid-message is-error">
@@ -734,6 +929,8 @@ export function TrackingProjectView({ masterWorkbook, viewMode }: TrackingProjec
           </p>
         </section>
       )}
+
+      {detailRow && <TrackingFullDetailModal row={detailRow} onClose={() => setDetailRow(null)} />}
     </>
   );
 }
