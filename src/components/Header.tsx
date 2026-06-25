@@ -1,9 +1,10 @@
 interface HeaderProps {
   canCreateMaster: boolean;
   onCreateMaster: () => void;
+  onOpenMenu: () => void;
 }
 
-export function Header({ canCreateMaster, onCreateMaster }: HeaderProps) {
+export function Header({ canCreateMaster, onCreateMaster, onOpenMenu }: HeaderProps) {
   const peLogoUrl = `${import.meta.env.BASE_URL}power-electronics-transparente.webp`;
 
   return (
@@ -23,8 +24,10 @@ export function Header({ canCreateMaster, onCreateMaster }: HeaderProps) {
         >
           Crea Excel Maestro Actualizado
         </button>
-        <button className="header-more-button" type="button" aria-label="Más opciones">
-          ⋮
+        <button className="header-menu-button" type="button" aria-label="Abrir menu lateral" onClick={onOpenMenu}>
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
+          <span aria-hidden="true" />
         </button>
       </div>
     </header>

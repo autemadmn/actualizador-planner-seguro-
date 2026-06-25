@@ -10,8 +10,10 @@ import { Header } from './components/Header';
 import { MasterView } from './components/MasterView';
 import { PlanningFiltersBar } from './components/PlanningFiltersBar';
 import { PlannerView } from './components/PlannerView';
+import { SideMenu } from './components/SideMenu';
 import { SummaryBar } from './components/SummaryBar';
 import { Tabs, type TabKey } from './components/Tabs';
+import { TrackingProjectView } from './components/TrackingProjectView';
 import { useFilteredRows, useFilterOptions } from './hooks/useFilteredRows';
 import { useMasterWorkbook } from './hooks/useMasterWorkbook';
 import { usePlannerWorkbook } from './hooks/usePlannerWorkbook';
@@ -38,6 +40,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabKey>('excel');
   const [isFileModalOpen, setIsFileModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [lastLoadAt, setLastLoadAt] = useState<Date | null>(null);
   const [masterVersion, setMasterVersion] = useState(0);
   const [isCreatingMaster, setIsCreatingMaster] = useState(false);
@@ -182,6 +185,10 @@ function App() {
       );
     }
 
+    if (activeTab === 'tracking') {
+      return <TrackingProjectView masterWorkbook={master.workbook} />;
+    }
+
     return renderExcelWorkspace();
   };
 
@@ -190,6 +197,7 @@ function App() {
       <Header
         canCreateMaster={canStartMasterFlow}
         onCreateMaster={() => setIsCreateModalOpen(true)}
+        onOpenMenu={() => setIsSideMenuOpen(true)}
       />
 
       <main>
@@ -247,6 +255,13 @@ function App() {
         validationMessage={canStartMasterFlow ? validation.message : 'Carga el Excel de Planner actual y el Excel maestro.'}
         onClose={() => setIsCreateModalOpen(false)}
         onConfirm={() => void handleCreateMasterCopy()}
+      />
+
+      <SideMenu
+        isOpen={isSideMenuOpen}
+        activeTab={activeTab}
+        onSelect={setActiveTab}
+        onClose={() => setIsSideMenuOpen(false)}
       />
     </div>
   );
